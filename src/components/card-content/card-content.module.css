@@ -1,0 +1,7 @@
+.root {
+  width: clamp(450px, 75vw, 800px);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  text-align: center;
+}
