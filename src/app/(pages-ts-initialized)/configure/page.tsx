@@ -82,9 +82,9 @@ const PageConfigure = () => {
     if (watchedLiveboardIds.length <= 1) setValue("displaySeconds", undefined);
   }, [setValue, watchedLiveboardIds]);
 
-  const onSubmit = handleSubmit((formData) => {
+  const onSubmit = handleSubmit(async (formData) => {
     setDisplay(formData);
-    if (!fullscreen) toggle();
+    if (!fullscreen) void (await toggle());
     router.push("/display");
   });
 
