@@ -23,6 +23,8 @@ export type State = z.infer<typeof schemaState>;
 type Actions = {
   addLiveboard: (liveboard: State["liveboards"][number]) => void;
   removeLiveboard: (liveboardId: string) => void;
+  updateDisplay: (liveboardId: string, display: number | undefined) => void;
+  updateRefresh: (liveboardId: string, refresh: number | undefined) => void;
   reset: () => void;
 };
 
@@ -47,6 +49,28 @@ export const useDisplayStore = create<State & Actions>()(
           );
           if (removeIdx !== -1) {
             state.liveboards.splice(removeIdx, 1);
+          }
+        }),
+      updateDisplay: (liveboardId, display) =>
+        set((state) => {
+          const updateIdx = state.liveboards.findIndex(
+            (l) => l.id === liveboardId
+          );
+          if (updateIdx !== -1) {
+            state.liveboards[updateIdx].displaySeconds = display
+              ? Math.max(display, 60)
+              : 60;
+          }
+        }),
+      updateRefresh: (liveboardId, refresh) =>
+        set((state) => {
+          const updateIdx = state.liveboards.findIndex(
+            (l) => l.id === liveboardId
+          );
+          if (updateIdx !== -1) {
+            state.liveboards[updateIdx].refreshInterval = refresh
+              ? Math.max(refresh, 0)
+              : 0;
           }
         }),
       reset: () =>

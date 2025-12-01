@@ -11,6 +11,8 @@ import { useShallow } from "zustand/shallow";
 import { Button, Popover, Select, Text } from "@mantine/core";
 import { useMemo, useState } from "react";
 import { LiveboardDisplay } from "@/components/liveboard-display/liveboard-display";
+import { useFullscreen } from "@mantine/hooks";
+import { useRouter } from "next/navigation";
 
 const PageConfigure = () => {
   const [selectedLiveboard, setSelectedLiveboard] = useState<string | null>(
@@ -21,6 +23,8 @@ const PageConfigure = () => {
     useShallow((state) => [state.liveboards, state.addLiveboard, state.reset])
   );
   const [confirmResetOpen, setConfirmResetOpen] = useState<boolean>(false);
+  const { fullscreen, toggle } = useFullscreen();
+  const router = useRouter();
 
   const sortedLiveboards = useMemo(() => {
     if (!liveboards) return [];
@@ -55,6 +59,11 @@ const PageConfigure = () => {
   const handleConfirmReset = () => {
     reset();
     setConfirmResetOpen(false);
+  };
+
+  const handleGo = async () => {
+    if (!fullscreen) void (await toggle());
+    router.push("/display");
   };
 
   if (error)
@@ -164,6 +173,7 @@ const PageConfigure = () => {
             variant="filled"
             type="button"
             disabled={displayLiveboards.length === 0}
+            onClick={handleGo}
           >
             Go
           </Button>

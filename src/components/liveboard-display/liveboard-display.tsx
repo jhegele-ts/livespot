@@ -11,12 +11,26 @@ import {
 import { ChartColumnStacked, X } from "lucide-react";
 
 export const LiveboardDisplay = () => {
-  const [liveboards, removeLiveboard] = useDisplayStore(
-    useShallow((state) => [state.liveboards, state.removeLiveboard])
-  );
+  const [liveboards, removeLiveboard, updateDisplay, updateRefresh] =
+    useDisplayStore(
+      useShallow((state) => [
+        state.liveboards,
+        state.removeLiveboard,
+        state.updateDisplay,
+        state.updateRefresh,
+      ])
+    );
 
   const handleRemoveLiveboard = (liveboardId: string) => {
     removeLiveboard(liveboardId);
+  };
+
+  const handleDisplayBlur = (liveboardId: string, value: string) => {
+    updateDisplay(liveboardId, value === "" ? 0 : Number(value));
+  };
+
+  const handleRefreshBlur = (liveboardId: string, value: string) => {
+    updateRefresh(liveboardId, value === "" ? 0 : Number(value));
   };
 
   if (liveboards.length === 0)
@@ -123,6 +137,9 @@ export const LiveboardDisplay = () => {
                   value={lb.displaySeconds}
                   style={{ width: "100%" }}
                   hideControls
+                  onBlur={({ target: { value } }) =>
+                    handleDisplayBlur(lb.id, value)
+                  }
                 />
               </div>
             )}
@@ -132,6 +149,9 @@ export const LiveboardDisplay = () => {
                 value={lb.refreshInterval}
                 style={{ width: "100%" }}
                 hideControls
+                onBlur={({ target: { value } }) =>
+                  handleRefreshBlur(lb.id, value)
+                }
               />
             </div>
             <div style={{ width: "40px" }}>
