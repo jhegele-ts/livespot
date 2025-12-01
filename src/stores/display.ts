@@ -3,63 +3,56 @@ import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import { persist } from "zustand/middleware";
 
-export const schemaState = z
-  .object({
-    liveboardIds: z
-      .string()
-      .array()
-      .min(1, { error: "Must select at least 1 liveboard" }),
-    displaySeconds: z
-      .number()
-      .min(60, { error: "Minimum of 60 seconds" })
-      .optional(),
-  })
-  .refine(
-    (vals) => {
-      if (vals.liveboardIds.length > 1 && vals.displaySeconds === undefined)
-        return false;
-      return true;
-    },
-    {
-      error: "Display timing is required when adding multiple liveboards",
-      path: ["displaySeconds"],
-    }
-  );
+export const schemaState = z.object({
+  liveboards: z.array(
+    z.object({
+      id: z.string().min(1, { error: "Required" }),
+      name: z.string().min(1, { error: "Required" }),
+      refreshInterval: z.coerce
+        .number<number>()
+        .min(0, { error: "Must be positive" }),
+      displaySeconds: z.coerce
+        .number<number>()
+        .min(60, { error: "Minimum 60 seconds" }),
+    })
+  ),
+});
 
 export type State = z.infer<typeof schemaState>;
 
 type Actions = {
-  setDisplay: (display: State) => void;
-  clearDisplay: () => void;
-  validate: () => boolean;
+  addLiveboard: (liveboard: State["liveboards"][number]) => void;
+  removeLiveboard: (liveboardId: string) => void;
+  reset: () => void;
 };
 
 const initState: State = {
-  liveboardIds: [],
-  displaySeconds: undefined,
+  liveboards: [],
 };
 
 export const useDisplayStore = create<State & Actions>()(
   persist(
-    immer((set, get) => ({
+    immer((set) => ({
       ...initState,
-      setDisplay: (display) =>
+      addLiveboard: (liveboard) =>
         set((state) => {
-          state.liveboardIds = display.liveboardIds;
-          state.displaySeconds = display.displaySeconds;
+          if (!state.liveboards.map((l) => l.id).includes(liveboard.id)) {
+            state.liveboards.push(liveboard);
+          }
         }),
-      clearDisplay: () =>
+      removeLiveboard: (liveboardId) =>
         set((state) => {
-          state.liveboardIds = initState.liveboardIds;
-          state.displaySeconds = initState.displaySeconds;
+          const removeIdx = state.liveboards.findIndex(
+            (l) => l.id === liveboardId
+          );
+          if (removeIdx !== -1) {
+            state.liveboards.splice(removeIdx, 1);
+          }
         }),
-      validate: () => {
-        const { success } = schemaState.safeParse({
-          liveboardIds: get().liveboardIds,
-          displaySeconds: get().displaySeconds,
-        });
-        return success;
-      },
+      reset: () =>
+        set((state) => {
+          state.liveboards = initState.liveboards;
+        }),
     })),
     { name: "livespot-display-store" }
   )

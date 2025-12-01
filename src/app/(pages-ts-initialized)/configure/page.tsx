@@ -1,92 +1,61 @@
 "use client";
 
-import { MultiSelect, Input, NumberInput, Button } from "@mantine/core";
-import { useFullscreen } from "@mantine/hooks";
 import styles from "./page.module.css";
 import { useLiveboards } from "@/hooks/useLiveboards";
-import { useEffect, useMemo, useState } from "react";
-import { useDebounce } from "@uidotdev/usehooks";
-import { useForm, Controller, useWatch } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  schemaState as schemaStateDisplay,
-  State as StateDisplay,
-  useDisplayStore,
-} from "@/stores/display";
-import { useShallow } from "zustand/shallow";
-import { useRouter } from "next/navigation";
 import { PageError } from "@/components/page-error/page-error";
 import { PageLoading } from "@/components/page-loading/page-loading";
 import { CardContent } from "@/components/card-content/card-content";
 import { HeaderContent } from "@/components/header-content/header-content";
+import { useDisplayStore } from "@/stores/display";
+import { useShallow } from "zustand/shallow";
+import { Button, Popover, Select, Text } from "@mantine/core";
+import { useMemo, useState } from "react";
+import { LiveboardDisplay } from "@/components/liveboard-display/liveboard-display";
 
 const PageConfigure = () => {
-  const { liveboards, error, isLoading } = useLiveboards();
-  const [searchValue, setSearchValue] = useState<string>("");
-  // Debounce search value to prevent searching with every
-  // typed letter
-  const debouncedSearchValue = useDebounce(searchValue, 500);
-  const [liveboardIds, displaySeconds, setDisplay] = useDisplayStore(
-    useShallow((state) => [
-      state.liveboardIds,
-      state.displaySeconds,
-      state.setDisplay,
-    ])
+  const [selectedLiveboard, setSelectedLiveboard] = useState<string | null>(
+    null
   );
-  const {
-    control,
-    handleSubmit,
-    setValue,
-    formState: { errors, isSubmitting },
-  } = useForm<StateDisplay>({
-    resolver: zodResolver(schemaStateDisplay),
-    defaultValues: {
-      liveboardIds,
-      displaySeconds,
-    },
-  });
-  const watchedLiveboardIds = useWatch({
-    control,
-    name: "liveboardIds",
-    defaultValue: [],
-  });
-  const router = useRouter();
-  const { fullscreen, toggle } = useFullscreen();
+  const { liveboards, error, isLoading } = useLiveboards();
+  const [displayLiveboards, addLiveboard, reset] = useDisplayStore(
+    useShallow((state) => [state.liveboards, state.addLiveboard, state.reset])
+  );
+  const [confirmResetOpen, setConfirmResetOpen] = useState<boolean>(false);
 
   const sortedLiveboards = useMemo(() => {
-    // Memoize and sort liveboards by name
     if (!liveboards) return [];
-    liveboards.sort((a, b) => {
-      if (!a.name) return 0;
-      if (!b.name) return 0;
-      return a.name > b.name ? 1 : a.name < b.name ? -1 : 0;
-    });
-    return liveboards.map((lb) => ({
-      value: lb.id,
-      label: lb.name ?? "Unnamed liveboard",
-    }));
-  }, [liveboards]);
-
-  const searchableLiveboards = useMemo(() => {
-    // Memoize searchable set of liveboards based on
-    // entered search value
-    if (debouncedSearchValue === "") return sortedLiveboards;
-    return sortedLiveboards.filter((lb) =>
-      lb.label?.toLowerCase().includes(debouncedSearchValue)
+    const formattedLiveboards = liveboards
+      .filter((lb) => !displayLiveboards.map((l) => l.id).includes(lb.id))
+      .map((lb) => ({
+        value: lb.id,
+        label: lb.name || "Unnamed Liveboard",
+      }));
+    formattedLiveboards.sort((a, b) =>
+      a.label > b.label ? 1 : a.label < b.label ? -1 : 0
     );
-  }, [debouncedSearchValue, sortedLiveboards]);
+    return formattedLiveboards;
+  }, [displayLiveboards, liveboards]);
 
-  useEffect(() => {
-    // Ensure that displaySeconds is not set when less than 2 liveboards
-    // are actively selected
-    if (watchedLiveboardIds.length <= 1) setValue("displaySeconds", undefined);
-  }, [setValue, watchedLiveboardIds]);
+  const handleSubmit: React.FormEventHandler<HTMLFormElement> = (event) => {
+    event.preventDefault();
+    const toAdd = liveboards?.find((lb) => lb.id === selectedLiveboard);
+    if (toAdd) {
+      addLiveboard({
+        id: toAdd.id,
+        name: toAdd.name ?? "Unnamed Liveboard",
+        refreshInterval: 0,
+        displaySeconds: 60,
+      });
+      setSelectedLiveboard(null);
+    }
+  };
 
-  const onSubmit = handleSubmit(async (formData) => {
-    setDisplay(formData);
-    if (!fullscreen) void (await toggle());
-    router.push("/display");
-  });
+  const handleReset = () => setConfirmResetOpen(true);
+
+  const handleConfirmReset = () => {
+    reset();
+    setConfirmResetOpen(false);
+  };
 
   if (error)
     return (
@@ -105,56 +74,100 @@ const PageConfigure = () => {
         <HeaderContent
           title="LiveSpot"
           description="Configure your full-screen display"
-        ></HeaderContent>
-        <form className={styles.form} onSubmit={onSubmit}>
-          <Controller
-            control={control}
-            name="liveboardIds"
-            render={({ field: { value, onChange } }) => (
-              <Input.Wrapper
-                label="Select liveboards to display"
-                error={errors.liveboardIds?.message}
-              >
-                <MultiSelect
-                  placeholder="Search for liveboards"
-                  searchValue={searchValue}
-                  onSearchChange={setSearchValue}
-                  data={searchableLiveboards}
-                  value={value}
-                  onChange={onChange}
-                  searchable
-                />
-              </Input.Wrapper>
-            )}
+        />
+        <form className={styles.form} onSubmit={handleSubmit}>
+          <Select
+            label="Select a liveboard to add it"
+            data={sortedLiveboards}
+            searchable
+            style={{ flex: 1 }}
+            value={selectedLiveboard}
+            onChange={(val) => setSelectedLiveboard(val ?? "")}
           />
-          {watchedLiveboardIds.length > 1 && (
-            <Input.Wrapper
-              label="Display seconds"
-              description="Number of seconds to display each liveboard. Minimum 1."
-              error={errors.displaySeconds?.message}
-            >
-              <Controller
-                control={control}
-                name="displaySeconds"
-                render={({ field: { value, onChange } }) => (
-                  <NumberInput value={value} onChange={(e) => onChange(e)} />
-                )}
-              />
-            </Input.Wrapper>
-          )}
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "flex-end",
-            }}
-          >
-            <Button variant="filled" type="submit" loading={isSubmitting}>
-              Submit
-            </Button>
-          </div>
+          <Button variant="filled" type="submit">
+            Add
+          </Button>
         </form>
+        <div style={{ width: "100%", height: "400px" }}>
+          <LiveboardDisplay />
+        </div>
+        <div
+          style={{
+            width: "100%",
+            display: "flex",
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "flex-end",
+            gap: "0.5rem",
+          }}
+        >
+          <Popover
+            opened={confirmResetOpen}
+            onChange={(opened) => setConfirmResetOpen(opened)}
+            position="top"
+            withArrow
+          >
+            <Popover.Target>
+              <Button
+                variant="outline"
+                color="red"
+                type="button"
+                onClick={handleReset}
+                disabled={displayLiveboards.length === 0}
+              >
+                Reset
+              </Button>
+            </Popover.Target>
+            <Popover.Dropdown>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "1rem",
+                  maxWidth: "250px",
+                }}
+              >
+                <Text size="sm">
+                  Are you sure you want to reset and clear your selected
+                  liveboards? This cannot be undone.
+                </Text>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "flex-end",
+                    gap: "0.5rem",
+                  }}
+                >
+                  <Button
+                    variant="filled"
+                    color="green"
+                    onClick={() => setConfirmResetOpen(false)}
+                    size="xs"
+                  >
+                    No
+                  </Button>
+                  <Button
+                    variant="filled"
+                    color="red"
+                    onClick={handleConfirmReset}
+                    size="xs"
+                  >
+                    Yes
+                  </Button>
+                </div>
+              </div>
+            </Popover.Dropdown>
+          </Popover>
+          <Button
+            variant="filled"
+            type="button"
+            disabled={displayLiveboards.length === 0}
+          >
+            Go
+          </Button>
+        </div>
       </CardContent>
     </div>
   );
