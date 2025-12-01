@@ -13,13 +13,29 @@ import {
 import { useForm, Controller, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button, Input, SegmentedControl } from "@mantine/core";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
 
 const PageHome = () => {
   const { env, error, isLoading } = useEnvironment();
   const { getToken } = useAuth();
+  const defaultValues: SchemaApiRequestThoughtSpotTokenPost = useMemo(() => {
+    if (env && env.useEnvironmentVars)
+      return {
+        useEnvVars: true,
+        username: "",
+        validityTimeInSeconds: 300,
+      } as SchemaApiRequestThoughtSpotTokenPost;
+    return {
+      useEnvVars: false,
+      host: "",
+      username: "",
+      authType: "password",
+      validityTimeInSeconds: 300,
+      password: "",
+    } as SchemaApiRequestThoughtSpotTokenPost;
+  }, [env]);
   const {
     register,
     handleSubmit,
@@ -28,10 +44,7 @@ const PageHome = () => {
     formState: { errors, isSubmitting },
   } = useForm<SchemaApiRequestThoughtSpotTokenPost>({
     resolver: zodResolver(schemaApiRequestThoughtSpotTokenPost),
-    defaultValues: {
-      useEnvVars: env?.useEnvironmentVars,
-      validityTimeInSeconds: 300,
-    },
+    defaultValues,
   });
   const watchedAuthType = useWatch({
     control,
@@ -51,36 +64,39 @@ const PageHome = () => {
     }
   }, [env, setValue]);
 
-  const onSubmit = handleSubmit(async (formData) => {
-    if (formData.useEnvVars) {
-      void (await getToken({
-        useEnvVars: true,
-        username: formData.username,
-        validityTimeInSeconds: formData.validityTimeInSeconds,
-      }));
-    } else {
-      if (formData.authType === "password") {
+  const onSubmit = handleSubmit(
+    async (formData) => {
+      if (formData.useEnvVars) {
         void (await getToken({
-          useEnvVars: false,
-          authType: formData.authType,
-          host: formData.host,
+          useEnvVars: true,
           username: formData.username,
-          password: formData.password,
           validityTimeInSeconds: formData.validityTimeInSeconds,
         }));
       } else {
-        void (await getToken({
-          useEnvVars: false,
-          authType: formData.authType,
-          host: formData.host,
-          username: formData.username,
-          secretKey: formData.secretKey,
-          validityTimeInSeconds: formData.validityTimeInSeconds,
-        }));
+        if (formData.authType === "password") {
+          void (await getToken({
+            useEnvVars: false,
+            authType: formData.authType,
+            host: formData.host,
+            username: formData.username,
+            password: formData.password,
+            validityTimeInSeconds: formData.validityTimeInSeconds,
+          }));
+        } else {
+          void (await getToken({
+            useEnvVars: false,
+            authType: formData.authType,
+            host: formData.host,
+            username: formData.username,
+            secretKey: formData.secretKey,
+            validityTimeInSeconds: formData.validityTimeInSeconds,
+          }));
+        }
       }
-    }
-    router.push("/configure");
-  });
+      router.push("/configure");
+    },
+    (error) => console.log(error)
+  );
 
   if (error)
     return (
