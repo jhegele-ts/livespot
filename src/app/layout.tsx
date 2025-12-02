@@ -5,6 +5,9 @@ import "@mantine/core/styles.layer.css";
 import "@mantine/notifications/styles.layer.css";
 import { ColorSchemeScript, mantineHtmlProps } from "@mantine/core";
 import { Providers } from "@/components/providers/providers";
+import styles from "./layout.module.css";
+import { IconBrandGithubFilled } from "@tabler/icons-react";
+import Link from "next/link";
 
 const fontPoppins = Poppins({
   variable: "--font-poppins",
@@ -35,7 +38,20 @@ export default function RootLayout({
         <ColorSchemeScript />
       </head>
       <body className={`${fontPoppins.variable} ${fontInter.variable}`}>
-        <Providers>{children}</Providers>
+        <main className={styles.root}>
+          <Providers>{children}</Providers>
+          <div className={styles.links}>
+            <Link
+              href="https://github.com/jhegele-ts/livespot"
+              target="_blank"
+              style={{
+                color: "black",
+              }}
+            >
+              <IconBrandGithubFilled className={styles.linkIcon} />
+            </Link>
+          </div>
+        </main>
       </body>
     </html>
   );
