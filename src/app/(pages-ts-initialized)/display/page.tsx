@@ -79,6 +79,7 @@ const PageDisplay = () => {
     <section className={styles.root}>
       <LiveboardEmbed
         liveboardId={displayLiveboards[displayIndex].id}
+        hideLiveboardHeader={displayLiveboards[displayIndex].hideHeader}
         fullHeight
         lazyLoadingForFullHeight
         frameParams={{

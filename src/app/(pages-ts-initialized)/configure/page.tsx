@@ -49,6 +49,7 @@ const PageConfigure = () => {
         name: toAdd.name ?? "Unnamed Liveboard",
         refreshInterval: 0,
         displaySeconds: 60,
+        hideHeader: false,
       });
       setSelectedLiveboard(null);
     }

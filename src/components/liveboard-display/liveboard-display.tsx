@@ -8,18 +8,24 @@ import {
   ThemeIcon,
   Tooltip,
 } from "@mantine/core";
-import { ChartColumnStacked, X } from "lucide-react";
+import { ChartColumnStacked, Eye, EyeClosed, X } from "lucide-react";
 
 export const LiveboardDisplay = () => {
-  const [liveboards, removeLiveboard, updateDisplay, updateRefresh] =
-    useDisplayStore(
-      useShallow((state) => [
-        state.liveboards,
-        state.removeLiveboard,
-        state.updateDisplay,
-        state.updateRefresh,
-      ])
-    );
+  const [
+    liveboards,
+    removeLiveboard,
+    updateDisplay,
+    updateRefresh,
+    updateHideHeader,
+  ] = useDisplayStore(
+    useShallow((state) => [
+      state.liveboards,
+      state.removeLiveboard,
+      state.updateDisplay,
+      state.updateRefresh,
+      state.updateHideHeader,
+    ])
+  );
 
   const handleRemoveLiveboard = (liveboardId: string) => {
     removeLiveboard(liveboardId);
@@ -31,6 +37,10 @@ export const LiveboardDisplay = () => {
 
   const handleRefreshBlur = (liveboardId: string, value: string) => {
     updateRefresh(liveboardId, value === "" ? 0 : Number(value));
+  };
+
+  const handleUpdateHideHeader = (liveboardId: string, hideHeader: boolean) => {
+    updateHideHeader(liveboardId, hideHeader);
   };
 
   if (liveboards.length === 0)
@@ -77,13 +87,27 @@ export const LiveboardDisplay = () => {
           >
             Name
           </Text>
+          <Tooltip label="Show/hide liveboard header. Note that hiding the header will remove filters and tabs.">
+            <Text
+              size="xs"
+              fw="bold"
+              style={{
+                width: "80px",
+                textAlign: "center",
+                userSelect: "none",
+                textDecoration: "underline dotted black",
+              }}
+            >
+              Header
+            </Text>
+          </Tooltip>
           {liveboards.length > 1 && (
             <Tooltip label="Length of time, in seconds, that this liveboard is displayed">
               <Text
                 size="xs"
                 fw="bold"
                 style={{
-                  width: "100px",
+                  width: "80px",
                   textAlign: "center",
                   userSelect: "none",
                   textDecoration: "underline dotted black",
@@ -98,7 +122,7 @@ export const LiveboardDisplay = () => {
               size="xs"
               fw="bold"
               style={{
-                width: "100px",
+                width: "80px",
                 textAlign: "center",
                 userSelect: "none",
                 textDecoration: "underline dotted black",
@@ -130,8 +154,18 @@ export const LiveboardDisplay = () => {
             >
               {lb.name}
             </Text>
+            <div style={{ width: "80px" }}>
+              <ActionIcon
+                variant="subtle"
+                color={lb.hideHeader ? "gray.5" : "green"}
+                radius="xl"
+                onClick={() => handleUpdateHideHeader(lb.id, !lb.hideHeader)}
+              >
+                {lb.hideHeader ? <EyeClosed /> : <Eye />}
+              </ActionIcon>
+            </div>
             {liveboards.length > 1 && (
-              <div style={{ width: "100px" }}>
+              <div style={{ width: "80px" }}>
                 <NumberInput
                   size="xs"
                   value={lb.displaySeconds}
@@ -143,7 +177,7 @@ export const LiveboardDisplay = () => {
                 />
               </div>
             )}
-            <div style={{ width: "100px" }}>
+            <div style={{ width: "80px" }}>
               <NumberInput
                 size="xs"
                 value={lb.refreshInterval}
