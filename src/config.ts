@@ -19,6 +19,6 @@
 
 export const appConfiguration = {
   auth: {
-    useEnvironmentVariables: true,
+    useEnvironmentVariables: false,
   },
 };
